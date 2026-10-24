@@ -67,7 +67,7 @@ func Detection(split string, seed uint64, n int) []Sample {
 	out := make([]Sample, 0, n)
 	for i := 0; i < n; i++ {
 		var text strings.Builder
-		var spans []Span
+		spans := []Span{}
 		parts := 1 + g.R.IntN(3)
 		for p := 0; p < parts; p++ {
 			if p > 0 {
