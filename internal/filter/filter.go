@@ -193,7 +193,8 @@ func (s *Stream) scan(i int, d detect.Detector, final bool) {
 	if !final {
 		limit = s.openStart(i, d, text)
 	}
-	for {
+	// Nothing can be committed when every possible start is still open.
+	for from < limit {
 		st, en, ok := d.FindFrom(text, from)
 		if !ok || st >= limit {
 			break

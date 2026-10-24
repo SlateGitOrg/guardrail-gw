@@ -321,3 +321,28 @@ func TestSetOptions(t *testing.T) {
 		t.Error("unknown kind has category")
 	}
 }
+
+func TestFirstBytes(t *testing.T) {
+	info, err := AnalyzePattern(`(?:\+[0-9])?(?:ab|[xy]z)?k{0,2}Q`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range []byte("+axykQ") {
+		if !info.First.Contains(b) {
+			t.Errorf("first missing %q", b)
+		}
+	}
+	for _, b := range []byte("0bz") {
+		if info.First.Contains(b) {
+			t.Errorf("first wrongly has %q", b)
+		}
+	}
+	fold, _ := AnalyzePattern(`(?i)s`)
+	if !fold.First.Contains('S') || !fold.First.Contains('s') {
+		t.Error("fold-case first set")
+	}
+	any, _ := AnalyzePattern(`(?s).a`)
+	if !any.First.Contains('\n') {
+		t.Error("any-char first set")
+	}
+}

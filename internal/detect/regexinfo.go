@@ -60,6 +60,9 @@ var ErrAnchoredPattern = errors.New("pattern uses zero-width assertions")
 type PatternInfo struct {
 	MaxLen   int // maximum match length in bytes
 	Alphabet Alphabet
+	// First holds every byte a non-empty match can start with; scanning
+	// skips positions whose byte is not in it.
+	First Alphabet
 }
 
 // AnalyzePattern parses expr and derives its maximum match length and the
@@ -75,7 +78,60 @@ func AnalyzePattern(expr string) (PatternInfo, error) {
 		return PatternInfo{}, fmt.Errorf("analyze %q: %w", expr, err)
 	}
 	info.MaxLen = n
+	info.First, _ = first(re)
 	return info, nil
+}
+
+// first returns the set of bytes that can begin a match of re and whether
+// re can match the empty string. Only called on patterns walk accepted.
+func first(re *syntax.Regexp) (Alphabet, bool) {
+	var a Alphabet
+	switch re.Op {
+	case syntax.OpLiteral:
+		if len(re.Rune) == 0 {
+			return a, true
+		}
+		addRune(&a, re.Rune[0], re.Flags&syntax.FoldCase != 0)
+		return a, false
+	case syntax.OpCharClass:
+		for i := 0; i+1 < len(re.Rune); i += 2 {
+			a.addRange(re.Rune[i], re.Rune[i+1])
+		}
+		return a, false
+	case syntax.OpAnyChar, syntax.OpAnyCharNotNL:
+		a.addRange(0, unicode.MaxRune)
+		return a, false
+	case syntax.OpCapture:
+		return first(re.Sub[0])
+	case syntax.OpQuest:
+		f, _ := first(re.Sub[0])
+		return f, true
+	case syntax.OpRepeat:
+		f, nullable := first(re.Sub[0])
+		return f, nullable || re.Min == 0
+	case syntax.OpConcat:
+		for _, sub := range re.Sub {
+			f, nullable := first(sub)
+			for i := range a {
+				a[i] = a[i] || f[i]
+			}
+			if !nullable {
+				return a, false
+			}
+		}
+		return a, true
+	case syntax.OpAlternate:
+		any := false
+		for _, sub := range re.Sub {
+			f, nullable := first(sub)
+			for i := range a {
+				a[i] = a[i] || f[i]
+			}
+			any = any || nullable
+		}
+		return a, any
+	}
+	return a, true // OpEmptyMatch, OpNoMatch
 }
 
 func walk(re *syntax.Regexp, a *Alphabet) (int, error) {

@@ -19,9 +19,11 @@ func tokenLeft(text string, s int) bool {
 	return !isAlnum(c) && c != '_' && c != '-'
 }
 
+// tokenBounded accepts matches that end at a token boundary and satisfy
+// extra (if set). Pair it with leftCheck(tokenLeft).
 func tokenBounded(extra func(m string) bool) acceptFunc {
 	return func(text string, s, e int) (int, bool) {
-		if !tokenLeft(text, s) || !tokenRight(text, e) {
+		if !tokenRight(text, e) {
 			return 0, false
 		}
 		if extra != nil && !extra(text[s:e]) {
@@ -34,32 +36,32 @@ func tokenBounded(extra func(m string) bool) acceptFunc {
 // NewAWSAccessKey detects AWS access key IDs (AKIA/ASIA/ABIA/ACCA prefixes).
 func NewAWSAccessKey() (Detector, error) {
 	return newPattern(KindAWSAccessKey, CategorySecret, 95, 1,
-		`(?:AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{16}`, tokenBounded(nil))
+		`(?:AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{16}`, tokenBounded(nil), leftCheck(tokenLeft))
 }
 
 // NewGitHubToken detects classic (ghp_, gho_, ghu_, ghs_, ghr_) and
 // fine-grained (github_pat_) GitHub tokens.
 func NewGitHubToken() (Detector, error) {
 	return newPattern(KindGitHubToken, CategorySecret, 95, 1,
-		`gh[pousr]_[A-Za-z0-9]{36,251}|github_pat_[A-Za-z0-9_]{22,240}`, tokenBounded(nil))
+		`gh[pousr]_[A-Za-z0-9]{36,251}|github_pat_[A-Za-z0-9_]{22,240}`, tokenBounded(nil), leftCheck(tokenLeft))
 }
 
 // NewSlackToken detects Slack bot/user/app tokens.
 func NewSlackToken() (Detector, error) {
 	return newPattern(KindSlackToken, CategorySecret, 95, 1,
-		`xox[abposr]-[A-Za-z0-9\-]{10,250}`, tokenBounded(hasDigit))
+		`xox[abposr]-[A-Za-z0-9\-]{10,250}`, tokenBounded(hasDigit), leftCheck(tokenLeft))
 }
 
 // NewStripeKey detects Stripe secret and restricted keys.
 func NewStripeKey() (Detector, error) {
 	return newPattern(KindStripeKey, CategorySecret, 95, 1,
-		`[rs]k_(?:live|test)_[A-Za-z0-9]{16,247}`, tokenBounded(nil))
+		`[rs]k_(?:live|test)_[A-Za-z0-9]{16,247}`, tokenBounded(nil), leftCheck(tokenLeft))
 }
 
 // NewGoogleAPIKey detects Google Cloud API keys.
 func NewGoogleAPIKey() (Detector, error) {
 	return newPattern(KindGoogleAPIKey, CategorySecret, 95, 1,
-		`AIza[0-9A-Za-z_\-]{35}`, tokenBounded(nil))
+		`AIza[0-9A-Za-z_\-]{35}`, tokenBounded(nil), leftCheck(tokenLeft))
 }
 
 // NewLLMAPIKey detects OpenAI-style (sk-, sk-proj-) and Anthropic-style
@@ -70,7 +72,7 @@ func NewLLMAPIKey() (Detector, error) {
 		tokenBounded(func(m string) bool {
 			body := llmKeyPrefix.ReplaceAllString(m, "")
 			return hasDigit(body) && ShannonEntropy(body) >= 3.0
-		}))
+		}), leftCheck(tokenLeft))
 }
 
 var llmKeyPrefix = regexp.MustCompile(`^sk-(?:proj-|ant-[a-z]{3,5}[0-9]{2}-)?`)
@@ -92,7 +94,7 @@ func NewJWT() (Detector, error) {
 			_, alg := obj["alg"]
 			_, typ := obj["typ"]
 			return alg || typ
-		}))
+		}), leftCheck(tokenLeft))
 }
 
 // NewPrivateKey detects PEM private key headers.
@@ -101,37 +103,110 @@ func NewPrivateKey() (Detector, error) {
 		`-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----`, nil)
 }
 
-// credentialContext matches a credential-ish key followed by an assignment
-// operator at the very end of the left context window.
-var credentialContext = regexp.MustCompile(
-	`(?i)(?:password|passwd|pwd|passphrase|secret|api[_\-]?key|access[_\-]?token|auth[_\-]?token|client[_\-]?secret)["']?[ \t]{0,3}[:=][ \t]{0,3}["']?$`)
+// credentialKeys are key names whose assigned value is treated as a secret.
+var credentialKeys = []string{
+	"password", "passwd", "pwd", "passphrase", "secret", "apikey", "api_key", "api-key",
+	"access_token", "access-token", "accesstoken", "auth_token", "auth-token", "authtoken",
+	"client_secret", "client-secret", "clientsecret",
+}
 
-// credValueChars are the bytes a credential value may contain; a value that
-// runs on past 64 of them is not reported (truncating it would leak the rest).
+// credValueChars are the bytes a credential value may contain.
 const credValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_+=/~-"
 
-// NewCredentialAssignment detects values assigned to credential-named keys,
-// e.g. `password: hunter2!` or `API_KEY="..."`. The key itself is left
-// context; only the value is reported.
-func NewCredentialAssignment() (Detector, error) {
-	const expr = `[A-Za-z0-9!@#$%^&*_+=/.~?\-]{6,64}`
-	return newPattern(KindCredentialPair, CategorySecret, 85, keywordWindow, expr, func(text string, s, e int) (int, bool) {
-		// Trim sentence punctuation the value class also admits.
-		for e > s && strings.IndexByte(".?", text[e-1]) >= 0 {
-			e--
+var (
+	credValue    = AlphabetOf(credValueChars)
+	credAlphabet = AlphabetOf(credValueChars, ".?")
+)
+
+// credentialDetector finds values assigned to credential-named keys, such
+// as `password: hunter2!` or `API_KEY="..."`. The key and operator are left
+// context; only the value is reported. It scans for ':' and '=' rather than
+// running a regex at every word, which keeps it cheap on prose.
+type credentialDetector struct{}
+
+// NewCredentialAssignment returns the credential-assignment detector.
+func NewCredentialAssignment() (Detector, error) { return credentialDetector{}, nil }
+
+const (
+	credMinLen = 6
+	credMaxLen = 64
+	// credMaxGap bounds operator-to-value distance: `: "` plus spacing.
+	credMaxGap = 5
+)
+
+func (credentialDetector) Kind() Kind             { return KindCredentialPair }
+func (credentialDetector) Category() Category     { return CategorySecret }
+func (credentialDetector) Priority() int          { return 85 }
+func (credentialDetector) MaxLen() int            { return credMaxLen }
+func (credentialDetector) LeftContext() int       { return keywordWindow }
+func (credentialDetector) InAlphabet(b byte) bool { return credAlphabet.Contains(b) }
+
+func (d credentialDetector) FindFrom(text string, from int) (int, int, bool) {
+	for p := max(0, from-credMaxGap); p < len(text); p++ {
+		if c := text[p]; c != ':' && c != '=' {
+			continue
 		}
-		if e-s < 6 || strings.IndexByte(credValueChars, byteAt(text, e)) >= 0 && byteAt(text, e) != 0 {
-			return 0, false
+		v, ok := valueStart(text, p)
+		if !ok || v < from {
+			continue
 		}
-		v := text[s:e]
-		if !credentialContext.MatchString(text[max(0, s-keywordWindow):s]) {
-			return 0, false
+		if e, ok := d.accept(text, v); ok {
+			return v, e, true
 		}
-		if v[0] == '$' || strings.Contains(strings.ToUpper(v), "REDACTED") || allSame(v) {
-			return 0, false
+	}
+	return 0, 0, false
+}
+
+// valueStart checks that the operator at p follows a credential key and
+// returns where the value begins.
+func valueStart(text string, p int) (int, bool) {
+	k := p
+	for k > 0 && p-k < 3 && (text[k-1] == ' ' || text[k-1] == '\t') {
+		k--
+	}
+	if k > 0 && (text[k-1] == '"' || text[k-1] == '\'') {
+		k--
+	}
+	key := strings.ToLower(text[max(0, k-16):k])
+	found := false
+	for _, w := range credentialKeys {
+		if strings.HasSuffix(key, w) {
+			found = true
+			break
 		}
-		return e, charClasses(v) >= 2
-	})
+	}
+	if !found {
+		return 0, false
+	}
+	v := p + 1
+	for v < len(text) && v-p <= 3 && (text[v] == ' ' || text[v] == '\t') {
+		v++
+	}
+	if v < len(text) && (text[v] == '"' || text[v] == '\'') {
+		v++
+	}
+	return v, v-p <= credMaxGap
+}
+
+func (credentialDetector) accept(text string, v int) (int, bool) {
+	e := v
+	for e < len(text) && credAlphabet.Contains(text[e]) {
+		e++
+		if e-v > credMaxLen {
+			return 0, false // longer values are not truncated-and-reported
+		}
+	}
+	for e > v && !credValue.Contains(text[e-1]) {
+		e-- // trailing sentence punctuation
+	}
+	if e-v < credMinLen {
+		return 0, false
+	}
+	val := text[v:e]
+	if val[0] == '$' || strings.Contains(strings.ToUpper(val), "REDACTED") || allSame(val) {
+		return 0, false
+	}
+	return e, charClasses(val) >= 2
 }
 
 func hasDigit(s string) bool {

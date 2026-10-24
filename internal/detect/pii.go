@@ -26,7 +26,7 @@ func NewEmail() (Detector, error) {
 	const expr = `[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9\-]{1,63}(?:\.[A-Za-z0-9\-]{1,63}){1,4}`
 	isLocal := func(c byte) bool { return isAlnum(c) || strings.IndexByte("._%+-", c) >= 0 }
 	return newPattern(KindEmail, CategoryPII, 60, 1, expr, func(text string, s, e int) (int, bool) {
-		if isLocal(byteAt(text, s-1)) || isAlnum(byteAt(text, e)) || byteAt(text, e) == '-' {
+		if isAlnum(byteAt(text, e)) || byteAt(text, e) == '-' {
 			return 0, false
 		}
 		m := text[s:e]
@@ -51,7 +51,7 @@ func NewEmail() (Detector, error) {
 			}
 		}
 		return e, true
-	})
+	}, need('@'), leftCheck(func(text string, s int) bool { return !isLocal(byteAt(text, s-1)) }))
 }
 
 var phoneKeywords = []string{"call", "phone", "tel", "mobile", "cell", "contact", "text", "whatsapp", "fax", "dial", "reach"}
@@ -60,12 +60,12 @@ var phoneKeywords = []string{"call", "phone", "tel", "mobile", "cell", "contact"
 // leading-zero national formats with separators.
 func NewPhone() (Detector, error) {
 	const expr = `(?:\+[0-9]{1,3}[ .\-]?)?(?:\([0-9]{1,4}\)[ .\-]?)?[0-9]{2,12}(?:[ .\-][0-9]{2,8}){0,4}`
-	return withLookahead(" -.")(newPattern(KindPhone, CategoryPII, 50, keywordWindow, expr, func(text string, s, e int) (int, bool) {
-		if !leftNumericBoundary(text, s) || !rightNumericBoundary(text, e) {
+	return newPattern(KindPhone, CategoryPII, 50, keywordWindow, expr, func(text string, s, e int) (int, bool) {
+		if !rightNumericBoundary(text, e) {
 			return 0, false
 		}
 		return e, validPhone(text, s, e)
-	}))
+	}, leftCheck(leftNumericBoundary), lookahead(" -."))
 }
 
 func validPhone(text string, s, e int) bool {
@@ -141,10 +141,7 @@ func nanp(d string) bool {
 // match a known issuer prefix and length.
 func NewCreditCard() (Detector, error) {
 	const expr = `[0-9](?:[ \-]?[0-9]){12,18}`
-	return withLookahead(" -.")(newPattern(KindCreditCard, CategoryPII, 70, 2, expr, func(text string, s, e int) (int, bool) {
-		if !leftNumericBoundary(text, s) {
-			return 0, false
-		}
+	return newPattern(KindCreditCard, CategoryPII, 70, 2, expr, func(text string, s, e int) (int, bool) {
 		// Try the longest digit-aligned prefix first; a card may be followed
 		// by another number group ("4111 1111 1111 1111 2026").
 		for end := e; end-s >= 13; end-- {
@@ -164,7 +161,7 @@ func NewCreditCard() (Detector, error) {
 			}
 		}
 		return 0, false
-	}))
+	}, leftCheck(leftNumericBoundary), lookahead(" -."))
 }
 
 // issuerMatches checks the IIN prefix and length against major card brands.
@@ -205,9 +202,6 @@ func atoiPrefix(d string, k int) int {
 func NewIBAN() (Detector, error) {
 	const expr = `[A-Z]{2}[0-9]{2}(?: ?[A-Z0-9]){11,30}`
 	return newPattern(KindIBAN, CategoryPII, 68, 1, expr, func(text string, s, e int) (int, bool) {
-		if isAlnum(byteAt(text, s-1)) {
-			return 0, false
-		}
 		want, ok := IBANLength(text[s : s+2])
 		if !ok {
 			return 0, false
@@ -224,7 +218,7 @@ func NewIBAN() (Detector, error) {
 			return 0, false
 		}
 		return end, IBANValid(text[s:end])
-	})
+	}, leftCheck(leftWordBoundary))
 }
 
 var ssnKeywords = []string{"ssn", "social security", "ss#", "soc sec"}
@@ -234,8 +228,8 @@ var ssnKeywords = []string{"ssn", "social security", "ss#", "soc sec"}
 // serial not 0000); undashed forms additionally require a nearby keyword.
 func NewUSSSN() (Detector, error) {
 	const expr = `[0-9]{3}[\- ]?[0-9]{2}[\- ]?[0-9]{4}`
-	return withLookahead(" -.")(newPattern(KindUSSSN, CategoryPII, 65, keywordWindow, expr, func(text string, s, e int) (int, bool) {
-		if !leftNumericBoundary(text, s) || !rightNumericBoundary(text, e) {
+	return newPattern(KindUSSSN, CategoryPII, 65, keywordWindow, expr, func(text string, s, e int) (int, bool) {
+		if !rightNumericBoundary(text, e) {
 			return 0, false
 		}
 		m := text[s:e]
@@ -252,7 +246,7 @@ func NewUSSSN() (Detector, error) {
 			return 0, false
 		}
 		return e, true
-	}))
+	}, leftCheck(leftNumericBoundary), lookahead(" -."))
 }
 
 var aadhaarKeywords = []string{"aadhaar", "aadhar", "uidai", "uid"}
@@ -261,8 +255,8 @@ var aadhaarKeywords = []string{"aadhaar", "aadhar", "uidai", "uid"}
 // Verhoeff check digit. Unseparated forms require a nearby keyword.
 func NewAadhaar() (Detector, error) {
 	const expr = `[2-9][0-9]{3}[ \-]?[0-9]{4}[ \-]?[0-9]{4}`
-	return withLookahead(" -.")(newPattern(KindAadhaar, CategoryPII, 65, keywordWindow, expr, func(text string, s, e int) (int, bool) {
-		if !leftNumericBoundary(text, s) || !rightNumericBoundary(text, e) {
+	return newPattern(KindAadhaar, CategoryPII, 65, keywordWindow, expr, func(text string, s, e int) (int, bool) {
+		if !rightNumericBoundary(text, e) {
 			return 0, false
 		}
 		m := text[s:e]
@@ -277,18 +271,18 @@ func NewAadhaar() (Detector, error) {
 			return 0, false
 		}
 		return e, true
-	}))
+	}, leftCheck(leftNumericBoundary), lookahead(" -."))
 }
 
 // NewSpanishID detects Spanish DNI and NIE numbers with a valid mod-23 letter.
 func NewSpanishID() (Detector, error) {
 	const expr = `(?:[XYZ]-?[0-9]{7}|[0-9]{8})-?[A-Z]`
 	return newPattern(KindSpanishID, CategoryPII, 65, 1, expr, func(text string, s, e int) (int, bool) {
-		if isAlnum(byteAt(text, s-1)) || !rightWordBoundary(text, e) {
+		if !rightWordBoundary(text, e) {
 			return 0, false
 		}
 		return e, SpanishIDValid(text[s:e])
-	})
+	}, leftCheck(leftWordBoundary))
 }
 
 // NewChineseRIC detects 18-character PRC Resident Identity Card numbers with a
@@ -296,9 +290,9 @@ func NewSpanishID() (Detector, error) {
 func NewChineseRIC() (Detector, error) {
 	const expr = `[1-9][0-9]{16}[0-9Xx]`
 	return newPattern(KindChineseRIC, CategoryPII, 65, 1, expr, func(text string, s, e int) (int, bool) {
-		if isAlnum(byteAt(text, s-1)) || !rightWordBoundary(text, e) {
+		if !rightWordBoundary(text, e) {
 			return 0, false
 		}
 		return e, ChineseRICValid(text[s:e])
-	})
+	}, leftCheck(leftWordBoundary))
 }

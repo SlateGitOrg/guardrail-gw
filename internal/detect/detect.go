@@ -16,6 +16,7 @@ package detect
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // Category groups detector kinds for policy purposes.
@@ -93,24 +94,54 @@ type patternDetector struct {
 	category Category
 	priority int
 	leftCtx  int
-	re       *regexp.Regexp
+	re       *regexp.Regexp // anchored: matches only at the start of its input
 	info     PatternInfo
 	accept   acceptFunc
+	left     func(text string, s int) bool
+	need     byte
 }
 
-func newPattern(kind Kind, cat Category, prio, leftCtx int, expr string, accept acceptFunc) (Detector, error) {
+// option customizes a pattern detector.
+type option func(*patternDetector)
+
+// leftCheck sets a cheap test on the bytes before a candidate start. It runs
+// before the regexp, so starts inside words or digit runs cost almost nothing.
+func leftCheck(f func(text string, s int) bool) option {
+	return func(p *patternDetector) { p.left = f }
+}
+
+// need declares a byte every match contains. Candidates that cannot reach
+// the next occurrence within MaxLen are skipped without running the regexp.
+func need(b byte) option { return func(p *patternDetector) { p.need = b } }
+
+// lookahead widens the alphabet with bytes the accept function peeks at past
+// the match end (for example the separator in "123-45-6789-0"), preserving
+// the streaming contract.
+func lookahead(extra string) option {
+	return func(p *patternDetector) {
+		for i := 0; i < len(extra); i++ {
+			p.info.Alphabet[extra[i]] = true
+		}
+	}
+}
+
+func newPattern(kind Kind, cat Category, prio, leftCtx int, expr string, accept acceptFunc, opts ...option) (Detector, error) {
 	info, err := AnalyzePattern(expr)
 	if err != nil {
 		return nil, fmt.Errorf("detector %s: %w", kind, err)
 	}
-	re, err := regexp.Compile(expr)
+	re, err := regexp.Compile(`^(?:` + expr + `)`)
 	if err != nil {
 		return nil, fmt.Errorf("detector %s: %w", kind, err)
 	}
 	if accept == nil {
 		accept = func(_ string, _, e int) (int, bool) { return e, true }
 	}
-	return &patternDetector{kind: kind, category: cat, priority: prio, leftCtx: leftCtx, re: re, info: info, accept: accept}, nil
+	p := &patternDetector{kind: kind, category: cat, priority: prio, leftCtx: leftCtx, re: re, info: info, accept: accept}
+	for _, o := range opts {
+		o(p)
+	}
+	return p, nil
 }
 
 func (p *patternDetector) Kind() Kind             { return p.kind }
@@ -120,19 +151,35 @@ func (p *patternDetector) MaxLen() int            { return p.info.MaxLen }
 func (p *patternDetector) LeftContext() int       { return p.leftCtx }
 func (p *patternDetector) InAlphabet(b byte) bool { return p.info.Alphabet.Contains(b) }
 
+// FindFrom returns the leftmost accepted match at or after from. Candidate
+// starts are filtered by the pattern's first-byte set, then the anchored
+// regexp gives the preferred (leftmost-first) match at that position, which
+// is exactly what an unanchored leftmost search would report there.
 func (p *patternDetector) FindFrom(text string, from int) (int, int, bool) {
-	for from <= len(text) {
-		loc := p.re.FindStringIndex(text[from:])
-		if loc == nil {
-			return 0, 0, false
-		}
-		s, e := from+loc[0], from+loc[1]
-		if e > s {
-			if end, ok := p.accept(text, s, e); ok && end > s && end <= e {
-				return s, end, true
+	next := -1 // index of the next p.need byte at or after s
+	for s := from; s < len(text); s++ {
+		if p.need != 0 {
+			if next < s {
+				i := strings.IndexByte(text[s:], p.need)
+				if i < 0 {
+					return 0, 0, false
+				}
+				next = s + i
+			}
+			if s < next-p.info.MaxLen {
+				s = next - p.info.MaxLen
 			}
 		}
-		from = s + 1
+		if !p.info.First[text[s]] || (p.left != nil && !p.left(text, s)) {
+			continue
+		}
+		loc := p.re.FindStringIndex(text[s:])
+		if loc == nil || loc[1] == 0 {
+			continue
+		}
+		if end, ok := p.accept(text, s, s+loc[1]); ok && end > s && end <= s+loc[1] {
+			return s, end, true
+		}
 	}
 	return 0, 0, false
 }
@@ -212,21 +259,4 @@ func separators(s string) string {
 		}
 	}
 	return string(out)
-}
-
-// withLookahead returns a constructor wrapper that widens a detector's
-// alphabet with bytes its accept function peeks at beyond the match end
-// (for example the separator in "123-45-6789-0"). Keeping such bytes in the
-// alphabet preserves the streaming contract.
-func withLookahead(extra string) func(Detector, error) (Detector, error) {
-	return func(d Detector, err error) (Detector, error) {
-		if err != nil {
-			return nil, err
-		}
-		p := d.(*patternDetector)
-		for i := 0; i < len(extra); i++ {
-			p.info.Alphabet[extra[i]] = true
-		}
-		return p, nil
-	}
 }
