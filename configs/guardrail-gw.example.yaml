@@ -1,0 +1,56 @@
+# guardrail-gw example configuration (local Ollama upstream).
+# Every field is validated strictly; unknown keys are rejected.
+# The file is polled every reload.interval and on SIGHUP; invalid edits are
+# rejected and the previous configuration stays active.
+
+listen: "127.0.0.1:8080"          # restart required to change
+
+upstream:
+  base_url: "http://127.0.0.1:11434"   # Ollama's OpenAI-compatible API
+  api_key_env: ""                      # env var with an upstream bearer token, if any
+  timeout: 120s                        # bounds the whole exchange, including streams
+
+limits:
+  max_request_bytes: 1048576
+  max_response_bytes: 8388608
+
+detectors:
+  disabled: []                         # e.g. [cn_ric, es_dni]
+  entropy:
+    min_len: 20
+    max_len: 512
+    min_bits: 4.0                      # chosen on the dev split (see DECISIONS.md)
+    keyword_bits: 3.0
+
+# Actions: allow (detector off) | log | redact | block
+policies:
+  default:
+    request:
+      pii: redact
+      secret: block
+      kinds:
+        phone: log                     # per-kind overrides beat the category
+    response:
+      pii: redact
+      secret: redact
+    injection:
+      threshold: 0.75
+      action: block
+  audit-only:
+    request: {pii: log, secret: log}
+    response: {pii: log, secret: log}
+    injection: {threshold: 0.75, action: log}
+
+keys:
+  # key_sha256 = `guardrail-gw hash-key <key>`; raw keys never live in config.
+  - name: demo
+    key_sha256: "7018a9b44b48b9d345b2cd2ea8f61cc3ed377032819a3cd7975fb0a801b46727"  # gw-demo-key-change-me
+    policy: default
+    rate_limit: {requests_per_minute: 120, burst: 20}
+
+audit:
+  path: "audit.jsonl"                  # restart required to change
+  hmac_key_env: "GW_AUDIT_HMAC_KEY"
+
+reload:
+  interval: 2s
