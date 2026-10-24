@@ -34,12 +34,12 @@ policies:
       pii: redact
       secret: redact
     injection:
-      threshold: 0.75
+      threshold: 0.70
       action: block
   audit-only:
     request: {pii: log, secret: log}
     response: {pii: log, secret: log}
-    injection: {threshold: 0.75, action: log}
+    injection: {threshold: 0.70, action: log}
 
 keys:
   # key_sha256 = `guardrail-gw hash-key <key>`; raw keys never live in config.

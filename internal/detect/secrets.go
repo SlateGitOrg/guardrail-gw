@@ -68,10 +68,12 @@ func NewLLMAPIKey() (Detector, error) {
 	return newPattern(KindLLMAPIKey, CategorySecret, 95, 1,
 		`sk-(?:proj-|ant-[a-z]{3,5}[0-9]{2}-)?[A-Za-z0-9_\-]{20,180}`,
 		tokenBounded(func(m string) bool {
-			tail := m[strings.LastIndexByte(m, '-')+1:]
-			return hasDigit(m) && ShannonEntropy(tail) >= 3.0
+			body := llmKeyPrefix.ReplaceAllString(m, "")
+			return hasDigit(body) && ShannonEntropy(body) >= 3.0
 		}))
 }
+
+var llmKeyPrefix = regexp.MustCompile(`^sk-(?:proj-|ant-[a-z]{3,5}[0-9]{2}-)?`)
 
 // NewJWT detects JSON Web Tokens whose header decodes to a JSON object with
 // an "alg" or "typ" member.
@@ -104,6 +106,10 @@ func NewPrivateKey() (Detector, error) {
 var credentialContext = regexp.MustCompile(
 	`(?i)(?:password|passwd|pwd|passphrase|secret|api[_\-]?key|access[_\-]?token|auth[_\-]?token|client[_\-]?secret)["']?[ \t]{0,3}[:=][ \t]{0,3}["']?$`)
 
+// credValueChars are the bytes a credential value may contain; a value that
+// runs on past 64 of them is not reported (truncating it would leak the rest).
+const credValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_+=/~-"
+
 // NewCredentialAssignment detects values assigned to credential-named keys,
 // e.g. `password: hunter2!` or `API_KEY="..."`. The key itself is left
 // context; only the value is reported.
@@ -114,7 +120,7 @@ func NewCredentialAssignment() (Detector, error) {
 		for e > s && strings.IndexByte(".?", text[e-1]) >= 0 {
 			e--
 		}
-		if e-s < 6 {
+		if e-s < 6 || strings.IndexByte(credValueChars, byteAt(text, e)) >= 0 && byteAt(text, e) != 0 {
 			return 0, false
 		}
 		v := text[s:e]

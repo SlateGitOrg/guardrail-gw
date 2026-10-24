@@ -59,7 +59,7 @@ var phoneKeywords = []string{"call", "phone", "tel", "mobile", "cell", "contact"
 // NewPhone detects international (+CC) and North American phone numbers, plus
 // leading-zero national formats with separators.
 func NewPhone() (Detector, error) {
-	const expr = `(?:\+[0-9]{1,3}[ .\-]?)?(?:\([0-9]{1,4}\)[ .\-]?)?[0-9]{2,12}(?:[ .\-][0-9]{2,5}){0,4}`
+	const expr = `(?:\+[0-9]{1,3}[ .\-]?)?(?:\([0-9]{1,4}\)[ .\-]?)?[0-9]{2,12}(?:[ .\-][0-9]{2,8}){0,4}`
 	return withLookahead(" -.")(newPattern(KindPhone, CategoryPII, 50, keywordWindow, expr, func(text string, s, e int) (int, bool) {
 		if !leftNumericBoundary(text, s) || !rightNumericBoundary(text, e) {
 			return 0, false
@@ -85,6 +85,7 @@ func validPhone(text string, s, e int) bool {
 		}
 		return nanp(digitsOnly(strings.Join(groups, "")))
 	}
+	groups := digitGroups(m)
 	switch {
 	case hasPlus:
 		return len(digits) >= 8 && len(digits) <= 15 && digits[0] != '0'
@@ -92,14 +93,42 @@ func validPhone(text string, s, e int) bool {
 		if seps == "" && !hasParens {
 			return hasKeywordBefore(text, s, phoneKeywords...)
 		}
-		return true
+		return sameInts(groups, 3, 3, 4)
 	case len(digits) == 11 && digits[0] == '1' && nanp(digits[1:]):
-		return seps != "" || hasKeywordBefore(text, s, phoneKeywords...)
+		if seps == "" {
+			return hasKeywordBefore(text, s, phoneKeywords...)
+		}
+		return sameInts(groups, 1, 3, 3, 4)
 	case (len(digits) == 10 || len(digits) == 11) && digits[0] == '0':
 		// National trunk-prefix formats such as "020 7946 0958".
-		return seps != "" || hasParens
+		if len(groups) < 2 || len(groups[0]) < 2 || len(groups[0]) > 5 {
+			return false
+		}
+		for _, g := range groups[1:] {
+			if len(g) < 3 || len(g) > 4 {
+				return false
+			}
+		}
+		return true
 	}
 	return false
+}
+
+// digitGroups splits a phone candidate into its runs of digits.
+func digitGroups(m string) []string {
+	return strings.FieldsFunc(m, func(r rune) bool { return r < '0' || r > '9' })
+}
+
+func sameInts(groups []string, want ...int) bool {
+	if len(groups) != len(want) {
+		return false
+	}
+	for i, g := range groups {
+		if len(g) != want[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // nanp validates a 10-digit North American number: area code and exchange

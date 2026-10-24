@@ -127,7 +127,7 @@ const (
 	DefaultMaxRequestBytes  = 1 << 20
 	DefaultMaxResponseBytes = 8 << 20
 	DefaultReloadInterval   = 2 * time.Second
-	DefaultInjection        = 0.75
+	DefaultInjection        = 0.70 // best F1 on the dev split (see DECISIONS.md)
 )
 
 // Load reads and compiles the file at path.

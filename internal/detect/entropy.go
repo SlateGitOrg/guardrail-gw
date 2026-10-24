@@ -2,7 +2,6 @@ package detect
 
 import (
 	"math"
-	"strings"
 )
 
 // EntropyConfig tunes the generic high-entropy token detector.
@@ -26,7 +25,9 @@ func DefaultEntropyConfig() EntropyConfig {
 
 var entropyKeywords = []string{"key", "token", "secret", "passw", "pwd", "credential", "auth", "bearer"}
 
-var tokenAlphabet = AlphabetOf("A-Z", "a-z", "0-9", "+/=_-")
+// '=' is excluded so "KEY=value" splits into two runs; base64 padding is
+// simply left outside the redacted span.
+var tokenAlphabet = AlphabetOf("A-Z", "a-z", "0-9", "+/_-")
 
 type entropyDetector struct{ cfg EntropyConfig }
 
@@ -77,7 +78,7 @@ func (d *entropyDetector) FindFrom(text string, from int) (int, int, bool) {
 }
 
 func (d *entropyDetector) accept(text string, s, e int) bool {
-	tok := strings.TrimRight(text[s:e], "=")
+	tok := text[s:e]
 	n := len(tok)
 	if n < 16 {
 		return false
@@ -105,8 +106,9 @@ func (d *entropyDetector) accept(text string, s, e int) bool {
 		}
 	}
 	// Random base62/base64 strings mix cases with digits or '+' '/';
-	// identifiers and words rarely carry several of those at once.
-	return lower > 0 && upper > 0 && other >= 2 && h >= d.cfg.MinBits
+	// identifiers and words rarely carry several of those at once. Long
+	// tokens with very high entropy pass even with a single digit.
+	return lower > 0 && upper > 0 && h >= d.cfg.MinBits && (other >= 2 || (n >= 32 && h >= d.cfg.MinBits+0.5))
 }
 
 // ShannonEntropy returns the empirical entropy of s in bits per byte.
