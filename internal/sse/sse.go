@@ -75,6 +75,10 @@ func (r *Reader) Next() (Event, error) {
 	}
 }
 
+// Buffered reports how many bytes are already read from the source but not
+// yet parsed. Proxies use it to flush only when they would otherwise wait.
+func (r *Reader) Buffered() int { return r.br.Buffered() }
+
 // readLine returns one line without its terminator.
 func (r *Reader) readLine() (string, error) {
 	var buf bytes.Buffer

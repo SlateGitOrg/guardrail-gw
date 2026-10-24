@@ -28,6 +28,18 @@ type rule struct {
 	name   string
 	weight float64
 	re     *regexp.Regexp
+	// triggers are substrings at least one of which every match contains;
+	// the regexp only runs when one is present (most prompts have none).
+	triggers []string
+}
+
+func (r rule) match(s string) bool {
+	for _, t := range r.triggers {
+		if strings.Contains(s, t) {
+			return r.re.MatchString(s)
+		}
+	}
+	return false
 }
 
 // Rules are matched against normalized text (lowercase, homoglyphs folded,
@@ -35,23 +47,23 @@ type rule struct {
 // de-leeted view of it.
 var rules = []rule{
 	{"instruction_override", 3.0, regexp.MustCompile(
-		`\b(ignore|disregard|forget|skip|bypass|override|stop following)\b.{0,40}?\b(previous|prior|above|earlier|preceding|initial|original|system|your|all|the)\b.{0,30}?\b(instructions?|prompts?|rules|directions|guidelines|directives)\b`)},
+		`\b(ignore|disregard|forget|skip|bypass|override|stop following)\b.{0,40}?\b(previous|prior|above|earlier|preceding|initial|original|system|your|all|the)\b.{0,30}?\b(instructions?|prompts?|rules|directions|guidelines|directives)\b`), []string{"ignore", "disregard", "forget", "skip", "bypass", "override", "stop following"}},
 	{"prompt_exfiltration", 2.5, regexp.MustCompile(
-		`\b(reveal|show|print|repeat|output|display|leak|dump|tell me)\b.{0,40}?(system prompt|initial prompt|hidden (instructions|prompt)|your (instructions|prompt|configuration|rules)|instructions you were given|everything above|text above|above this line)`)},
+		`\b(reveal|show|print|repeat|output|display|leak|dump|tell me)\b.{0,40}?(system prompt|initial prompt|hidden (instructions|prompt)|your (instructions|prompt|configuration|rules)|instructions you were given|everything above|text above|above this line)`), []string{"reveal", "show", "print", "repeat", "output", "display", "leak", "dump", "tell me"}},
 	{"jailbreak_persona", 2.0, regexp.MustCompile(
-		`\b(dan|do anything now|developer mode|jailbreak mode|jailbroken|unfiltered|unrestricted assistant|no (restrictions|rules|limits|content policy)|without (any )?(restrictions|rules|limits|filters))\b`)},
+		`\b(dan|do anything now|developer mode|jailbreak mode|jailbroken|unfiltered|unrestricted assistant|no (restrictions|rules|limits|content policy)|without (any )?(restrictions|rules|limits|filters))\b`), []string{"dan", "do anything", "developer mode", "jailbr", "unfiltered", "unrestricted", "no ", "without"}},
 	{"role_reassignment", 0.8, regexp.MustCompile(
-		`\b(you are now|from now on,? you|pretend (you are|to be|you have)|roleplay as)\b`)},
+		`\b(you are now|from now on,? you|pretend (you are|to be|you have)|roleplay as)\b`), []string{"you are now", "from now on", "pretend", "roleplay"}},
 	{"delimiter_injection", 2.0, regexp.MustCompile(
-		`(</?(system|user|assistant)>|<\|im_(start|end)\|>|\[/?inst\]|###\s*(new )?(system|instructions?)\b|begin system prompt)`)},
+		`(</?(system|user|assistant)>|<\|im_(start|end)\|>|\[/?inst\]|###\s*(new )?(system|instructions?)\b|begin system prompt)`), []string{"<", "[", "###", "begin system"}},
 	{"false_authority", 1.5, regexp.MustCompile(
-		`\b(system override|admin(istrator)? (says|mode|override)|as your (developer|creator|admin)|i am (your|the) (developer|admin|creator)|i authori[sz]e you)\b`)},
+		`\b(system override|admin(istrator)? (says|mode|override)|as your (developer|creator|admin)|i am (your|the) (developer|admin|creator)|i authori[sz]e you)\b`), []string{"override", "admin", "as your", "i am", "authori"}},
 	{"safety_bypass", 2.0, regexp.MustCompile(
-		`\b(bypass|disable|turn off|override|ignore|disregard)\b.{0,20}?\b(safety|content filters?|filters?|guardrails?|moderation|content polic(y|ies)|system prompt|safety settings)\b`)},
+		`\b(bypass|disable|turn off|override|ignore|disregard)\b.{0,20}?\b(safety|content filters?|filters?|guardrails?|moderation|content polic(y|ies)|system prompt|safety settings)\b`), []string{"bypass", "disable", "turn off", "override", "ignore", "disregard"}},
 	{"exfiltration_link", 2.0, regexp.MustCompile(
-		`!\[[^\]]*\]\(https?://[^)\s]*\?[^)\s]*=|append (the|this|our) (conversation|chat|history)`)},
-	{"new_instructions", 1.0, regexp.MustCompile(`\b(new|updated|real|actual) (instructions|policy|rules|task)\b`)},
-	{"coercion", 0.5, regexp.MustCompile(`\b(you must now|nothing else matters|instead,)`)},
+		`!\[[^\]]*\]\(https?://[^)\s]*\?[^)\s]*=|append (the|this|our) (conversation|chat|history)`), []string{"](", "append"}},
+	{"new_instructions", 1.0, regexp.MustCompile(`\b(new|updated|real|actual) (instructions|policy|rules|task)\b`), []string{"new ", "updated", "real ", "actual"}},
+	{"coercion", 0.5, regexp.MustCompile(`\b(you must now|nothing else matters|instead,)`), []string{"you must now", "nothing else matters", "instead,"}},
 }
 
 // Scale converts the summed weights into a score: 1 - exp(-sum/Scale).
@@ -68,7 +80,7 @@ func Evaluate(text string) Score {
 	total := 0.0
 	for _, r := range rules {
 		for _, v := range views {
-			if r.re.MatchString(v) {
+			if r.match(v) {
 				sigs = append(sigs, Signal{Name: r.name, Weight: r.weight})
 				total += r.weight
 				break
@@ -94,7 +106,7 @@ func Evaluate(text string) Score {
 
 func anyMatch(s string) bool {
 	for _, r := range rules {
-		if r.re.MatchString(s) {
+		if r.match(s) {
 			return true
 		}
 	}

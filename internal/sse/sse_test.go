@@ -92,3 +92,16 @@ func TestWriteError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestBuffered(t *testing.T) {
+	r := NewReader(strings.NewReader("data: a\n\ndata: b\n\n"), 100)
+	if _, err := r.Next(); err != nil {
+		t.Fatal(err)
+	}
+	if r.Buffered() == 0 {
+		t.Fatal("second event should already be buffered")
+	}
+	if _, err := r.Next(); err != nil || r.Buffered() != 0 {
+		t.Fatalf("err=%v buffered=%d", err, r.Buffered())
+	}
+}

@@ -30,6 +30,7 @@ type streamProxy struct {
 	x       *exchange
 	w       io.Writer
 	flush   func()
+	r       *sse.Reader
 	choices map[int]*streamState
 	meta    openai.Object // id/object/created/model from the latest chunk
 	guard   time.Duration
@@ -53,7 +54,8 @@ func (s *Server) streamResponse(w http.ResponseWriter, cancel func(), x *exchang
 			x.rec.Decision = audit.DecisionRedacted
 		}
 	}()
-	err := p.run(sse.NewReader(body, maxEventBytes))
+	p.r = sse.NewReader(body, maxEventBytes)
+	err := p.run()
 	cancel() // stop the upstream once we are done (normally or after a block)
 	if err != nil {
 		x.rec.Reason = err.Error()
@@ -71,9 +73,9 @@ func (p *streamProxy) state(idx int) *streamState {
 	return st
 }
 
-func (p *streamProxy) run(r *sse.Reader) error {
+func (p *streamProxy) run() error {
 	for {
-		ev, err := r.Next()
+		ev, err := p.r.Next()
 		if err != nil {
 			// Upstream ended without [DONE]: flush what is held, then stop.
 			ferr := p.flushAll()
@@ -256,10 +258,15 @@ func maxIndex(m map[int]*streamState) int {
 	return mx
 }
 
+// emit writes one event. It flushes only when no further upstream bytes are
+// already buffered, so bursts are coalesced into one write without delaying
+// any event behind an upstream wait.
 func (p *streamProxy) emit(ev sse.Event) error {
 	if err := sse.Write(p.w, ev); err != nil {
 		return fmt.Errorf("client write: %w", err)
 	}
-	p.flush()
+	if p.r.Buffered() == 0 || ev.Data == "[DONE]" {
+		p.flush()
+	}
 	return nil
 }

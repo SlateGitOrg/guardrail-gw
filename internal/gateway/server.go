@@ -93,7 +93,9 @@ func (s *Server) Apply(c *config.Compiled) {
 }
 
 // ReloadFailed records a rejected reload.
-func (s *Server) ReloadFailed(error) { s.o.Metrics.Add("gw_config_reloads_total", 1, "result", "rejected") }
+func (s *Server) ReloadFailed(error) {
+	s.o.Metrics.Add("gw_config_reloads_total", 1, "result", "rejected")
+}
 
 // Handler returns the HTTP handler.
 func (s *Server) Handler() http.Handler {
