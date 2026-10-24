@@ -245,7 +245,7 @@ proxy hop: one JSON decode, one re-encode and one write per event.
 ## Tests and quality gates
 
 `make check` runs gofmt, `go vet`, golangci-lint (zero findings), the full suite
-under `-race`, and the coverage gate. The gate reports **96.0%** statement
+under `-race`, and the coverage gate. The gate reports **96.3%** statement
 coverage of `internal/` and fails below 80% (`./scripts/coverage.sh`).
 Highlights:
 
