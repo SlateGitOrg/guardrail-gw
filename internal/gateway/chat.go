@@ -73,7 +73,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, rec.Status, "upstream unavailable", "upstream_error", "upstream_unavailable")
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	rec.UpstreamMS = roundMS(time.Since(start))
 	s.o.Metrics.Observe("gw_upstream_duration_seconds", time.Since(start))
 

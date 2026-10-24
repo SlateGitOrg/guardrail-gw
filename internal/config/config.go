@@ -21,14 +21,14 @@ import (
 
 // Config mirrors the YAML file.
 type Config struct {
-	Listen    string                   `yaml:"listen"`
-	Upstream  Upstream                 `yaml:"upstream"`
-	Limits    Limits                   `yaml:"limits"`
-	Detectors Detectors                `yaml:"detectors"`
-	Policies  map[string]PolicyConfig  `yaml:"policies"`
-	Keys      []KeyConfig              `yaml:"keys"`
-	Audit     Audit                    `yaml:"audit"`
-	Reload    Reload                   `yaml:"reload"`
+	Listen    string                  `yaml:"listen"`
+	Upstream  Upstream                `yaml:"upstream"`
+	Limits    Limits                  `yaml:"limits"`
+	Detectors Detectors               `yaml:"detectors"`
+	Policies  map[string]PolicyConfig `yaml:"policies"`
+	Keys      []KeyConfig             `yaml:"keys"`
+	Audit     Audit                   `yaml:"audit"`
+	Reload    Reload                  `yaml:"reload"`
 }
 
 // Upstream is the OpenAI-compatible backend (Ollama by default).

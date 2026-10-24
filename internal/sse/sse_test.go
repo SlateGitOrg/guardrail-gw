@@ -32,7 +32,7 @@ func readAll(t *testing.T, r io.Reader) []Event {
 	var out []Event
 	for {
 		ev, err := sr.Next()
-		if err == io.EOF || errors.Is(err, io.ErrUnexpectedEOF) {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			return out
 		}
 		if err != nil {

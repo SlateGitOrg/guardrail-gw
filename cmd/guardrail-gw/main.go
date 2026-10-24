@@ -38,8 +38,9 @@ var version = "dev"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	os.Exit(run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+	code := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
+	stop()
+	os.Exit(code)
 }
 
 func usage(w io.Writer) {
@@ -110,7 +111,11 @@ func cmdServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 		if auditLog, err = audit.Open(p); err != nil {
 			return err
 		}
-		defer auditLog.Close()
+		defer func() {
+			if err := auditLog.Close(); err != nil {
+				logger.Error("closing audit log", "err", err)
+			}
+		}()
 	} else {
 		logger.Warn("audit.path is empty: audit logging disabled")
 	}
@@ -229,7 +234,7 @@ func cmdVerify(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	n, err := audit.Verify(f)
 	if err != nil {
 		return fmt.Errorf("%s: %w (after %d valid records)", *file, err, n)

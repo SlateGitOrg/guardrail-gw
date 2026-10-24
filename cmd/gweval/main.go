@@ -32,7 +32,7 @@ func load[T any](path string) ([]T, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return corpus.ReadJSONL[T](f)
 }
 

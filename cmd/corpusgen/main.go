@@ -47,7 +47,7 @@ func generate(dir string) error {
 			return err
 		}
 		if err := s.Write(f); err != nil {
-			f.Close()
+			_ = f.Close()
 			return err
 		}
 		if err := f.Close(); err != nil {

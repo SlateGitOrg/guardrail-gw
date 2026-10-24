@@ -92,7 +92,7 @@ func TestParseErrors(t *testing.T) {
 		"redact inj":      strings.Replace(valid, "{threshold: 0.6, action: block}", "{action: redact}", 1),
 		"entropy max":     strings.Replace(valid, "{min_bits: 4.2}", "{max_len: 9000}", 1),
 		"entropy bounds":  strings.Replace(valid, "{min_bits: 4.2}", "{min_len: 50, max_len: 40}", 1),
-		"no keys":         valid[:strings.Index(valid, "keys:")],
+		"no keys":         noKeys(),
 		"bad yaml":        "listen: [",
 		"neg timeout":     strings.Replace(valid, "timeout: 30s", "timeout: -1s", 1),
 		"no policies":     "keys: []\n",
@@ -181,4 +181,9 @@ func TestWatcherRunTrigger(t *testing.T) {
 	}
 	cancel()
 	<-done
+}
+
+func noKeys() string {
+	before, _, _ := strings.Cut(valid, "keys:")
+	return before
 }

@@ -35,7 +35,9 @@ type options struct {
 	cpuprofile   string
 }
 
-func main() {
+func main() { os.Exit(mainCode()) }
+
+func mainCode() int {
 	var o options
 	flag.IntVar(&o.n, "n", 2000, "measured requests per scenario")
 	flag.IntVar(&o.c, "c", 4, "concurrent clients")
@@ -48,19 +50,19 @@ func main() {
 		f, err := os.Create(o.cpuprofile)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "gwbench:", err)
-			os.Exit(1)
+			return 1
 		}
 		if err := pprof.StartCPUProfile(f); err != nil {
 			fmt.Fprintln(os.Stderr, "gwbench:", err)
-			os.Exit(1)
+			return 1
 		}
 		defer pprof.StopCPUProfile()
 	}
 	if err := run(o, os.Stdout); err != nil {
-		pprof.StopCPUProfile()
 		fmt.Fprintln(os.Stderr, "gwbench:", err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 type result struct {
@@ -154,9 +156,13 @@ func load(client *http.Client, base string, body []byte, n, c int) ([]time.Durat
 					return
 				}
 				_, err = io.Copy(io.Discard, resp.Body)
-				resp.Body.Close()
-				if err != nil || resp.StatusCode != http.StatusOK {
-					errc <- fmt.Errorf("status %d: %v", resp.StatusCode, err)
+				_ = resp.Body.Close()
+				if err != nil {
+					errc <- fmt.Errorf("read response: %w", err)
+					return
+				}
+				if resp.StatusCode != http.StatusOK {
+					errc <- fmt.Errorf("unexpected status %d", resp.StatusCode)
 					return
 				}
 				lat[i] = time.Since(t0)
