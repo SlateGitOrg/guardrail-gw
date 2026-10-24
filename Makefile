@@ -4,7 +4,7 @@ GOFLAGS   ?= -p=3
 export GOFLAGS
 COVER_MIN ?= 80
 
-.PHONY: check fmt-check vet lint test-race cover build demo demo-ollama eval eval-dev bench fuzz corpus clean
+.PHONY: check fmt-check vet lint test-race cover build demo demo-ollama eval eval-dev bench fuzz mutation corpus clean
 
 ## check: format + vet + lint + race tests + coverage gate (what CI runs)
 check: fmt-check vet lint test-race cover
@@ -54,6 +54,10 @@ bench:
 ## fuzz: fuzz the chunk-boundary invariant (FUZZTIME, default 60s)
 fuzz:
 	$(GO) test -run '^$$' -fuzz FuzzChunkBoundary -fuzztime $${FUZZTIME:-60s} ./internal/filter/
+
+## mutation: show the streaming property test kills hold-back/lookahead mutants
+mutation:
+	./scripts/mutation-check.sh
 
 ## corpus: regenerate the committed synthetic corpus (deterministic)
 corpus:

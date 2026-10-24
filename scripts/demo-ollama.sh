@@ -27,10 +27,10 @@ ask() { # $1 = stream true/false, $2 = prompt
     -H "Authorization: Bearer gw-demo-key-change-me" -H "Content-Type: application/json" \
     -d "{\"model\":\"$MODEL\",\"stream\":$1,\"temperature\":0,\"max_tokens\":60,\"messages\":[{\"role\":\"system\",\"content\":\"Reply in one short sentence.\"},{\"role\":\"user\",\"content\":\"$2\"}]}"
 }
-echo "--- buffered: model is asked to repeat fictional test data"
-ask false "Repeat exactly: the test card is 4111 1111 1111 1111 and the contact is qa.lead@example.com" | head -c 800; echo
-echo "--- streaming: same request, filtered per delta"
-ask true "Repeat exactly: the test card is 4111 1111 1111 1111 and the contact is qa.lead@example.com" \
+echo "--- buffered: the prompt's e-mail is redacted before the model sees it"
+ask false "Reply to qa.lead@example.com with a one-line greeting that mentions their address." | head -c 800; echo
+echo "--- streaming: the model invents contact details; the response is filtered per delta"
+ask true "Invent a fictional support contact for example.com: one e-mail address and one US phone number written like 415-555-0132." \
   | grep '^data: {' | sed 's/^data: //' | python3 -c 'import json,sys
 print("".join((c.get("delta",{}).get("content") or "") for l in sys.stdin for c in json.loads(l).get("choices",[])))'
 echo "--- injection attempt (blocked before reaching the model)"
