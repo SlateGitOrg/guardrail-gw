@@ -8,11 +8,11 @@ import (
 	"math"
 	"sort"
 
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/detect"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/injection"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/injection"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 // Counts holds confusion counts.

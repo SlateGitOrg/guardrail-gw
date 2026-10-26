@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
 )
 
 // Span is a gold label.

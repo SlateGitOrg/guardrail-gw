@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
 )
 
 func exampleConfig(t *testing.T) (string, []byte) {

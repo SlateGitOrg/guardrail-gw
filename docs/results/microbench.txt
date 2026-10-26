@@ -1,15 +1,15 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/archit2501/guardrail-gw/internal/filter
+pkg: github.com/SlateGitOrg/guardrail-gw/internal/filter
 cpu: Apple M1 Pro
 BenchmarkApply-8     	    6027	    352982 ns/op	   7.01 MB/s
 BenchmarkStream4-8   	    3286	    643450 ns/op	   3.85 MB/s
 PASS
-ok  	github.com/archit2501/guardrail-gw/internal/filter	4.790s
+ok  	github.com/SlateGitOrg/guardrail-gw/internal/filter	4.790s
 goos: darwin
 goarch: arm64
-pkg: github.com/archit2501/guardrail-gw/internal/injection
+pkg: github.com/SlateGitOrg/guardrail-gw/internal/injection
 cpu: Apple M1 Pro
 BenchmarkEvaluate-8   	   28038	     83864 ns/op	  18.74 MB/s
 PASS
-ok  	github.com/archit2501/guardrail-gw/internal/injection	2.601s
+ok  	github.com/SlateGitOrg/guardrail-gw/internal/injection	2.601s

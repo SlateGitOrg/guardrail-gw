@@ -25,12 +25,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/audit"
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/gateway"
-	"github.com/archit2501/guardrail-gw/internal/injection"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/audit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/gateway"
+	"github.com/SlateGitOrg/guardrail-gw/internal/injection"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".

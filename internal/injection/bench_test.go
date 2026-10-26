@@ -3,7 +3,7 @@ package injection
 import (
 	"testing"
 
-	"github.com/archit2501/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
 )
 
 // BenchmarkEvaluate scores a ~1.6 KB prompt.

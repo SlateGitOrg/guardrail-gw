@@ -20,10 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/fakeupstream"
-	"github.com/archit2501/guardrail-gw/internal/gateway"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/fakeupstream"
+	"github.com/SlateGitOrg/guardrail-gw/internal/gateway"
 )
 
 const benchKey = "gw-bench-key"

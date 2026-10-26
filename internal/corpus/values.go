@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
 )
 
 // Gen produces random values. Vocab selects the name/domain lists so the

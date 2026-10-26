@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
 )
 
 // Action is what the gateway does with a finding. Actions are ordered by

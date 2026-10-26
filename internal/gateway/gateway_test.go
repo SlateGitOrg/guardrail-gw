@@ -13,12 +13,12 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/archit2501/guardrail-gw/internal/audit"
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/fakeupstream"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/sse"
+	"github.com/SlateGitOrg/guardrail-gw/internal/audit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/fakeupstream"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/sse"
 )
 
 const testKey = "gw-test-key"

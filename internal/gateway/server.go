@@ -15,11 +15,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/audit"
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/openai"
-	"github.com/archit2501/guardrail-gw/internal/ratelimit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/audit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/openai"
+	"github.com/SlateGitOrg/guardrail-gw/internal/ratelimit"
 )
 
 // Options carries the gateway's long-lived dependencies.

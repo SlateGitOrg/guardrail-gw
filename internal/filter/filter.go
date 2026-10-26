@@ -13,8 +13,8 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 // Resolver maps a finding's kind and category to an action.

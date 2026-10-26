@@ -1,4 +1,4 @@
-module github.com/archit2501/guardrail-gw
+module github.com/SlateGitOrg/guardrail-gw
 
 go 1.27.1
 

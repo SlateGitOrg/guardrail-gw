@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
 )
 
 func TestCounts(t *testing.T) {

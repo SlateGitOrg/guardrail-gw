@@ -3,7 +3,7 @@ package policy
 import (
 	"testing"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
 )
 
 func TestParseAndMarshal(t *testing.T) {

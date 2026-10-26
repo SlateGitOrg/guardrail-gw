@@ -15,8 +15,8 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/archit2501/guardrail-gw/internal/detect"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 // Config mirrors the YAML file.

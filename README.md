@@ -1,5 +1,7 @@
 # guardrail-gw
 
+[![CI](https://github.com/SlateGitOrg/guardrail-gw/actions/workflows/ci.yml/badge.svg)](https://github.com/SlateGitOrg/guardrail-gw/actions/workflows/ci.yml)
+
 An OpenAI-compatible LLM gateway that sits in front of a model server (Ollama by
 default) and enforces data-protection guardrails in both directions:
 
@@ -24,13 +26,12 @@ default) and enforces data-protection guardrails in both directions:
 
 It is a single Go binary with one dependency (a YAML parser).
 
-## Who it is for
+## Why
 
 Teams that run internal LLM apps against a self-hosted model and need a
 cheap, auditable control point: keep customer PII and credentials out of
 prompts and logs, stop the model from echoing secrets back, and get an
-audit trail. It is a portfolio/reference implementation, not a hardened
-product. See [Limitations](#limitations).
+audit trail. It is a reference implementation, not a hardened product. See [Limitations](#limitations).
 
 ## Architecture
 
@@ -70,7 +71,7 @@ The streaming algorithm, its correctness argument and complexity are in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The threat model is in
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
-## Quickstart
+## Quick start
 
 Requires Go 1.27.
 
@@ -242,7 +243,7 @@ loopback interface, and other jobs were running on the machine. Treat them as
 relative numbers. In the streaming case most of the added time is the extra
 proxy hop: one JSON decode, one re-encode and one write per event.
 
-## Tests and quality gates
+## Testing
 
 `make check` runs gofmt, `go vet`, golangci-lint (zero findings), the full suite
 under `-race`, and the coverage gate. The gate reports **96.3%** statement
@@ -266,7 +267,6 @@ Highlights:
 - `cmd/corpusgen`: the committed corpus must equal fresh generator output (drift guard).
 
 CI (`.github/workflows/ci.yml`) runs the same gates plus `make eval` and `make demo`.
-It has not been executed yet because the repository has not been pushed.
 
 ## Limitations
 
@@ -274,7 +274,7 @@ It has not been executed yet because the repository has not been pushed.
   will miss paraphrased, multilingual, or encoded attacks (base64, ROT13), and
   attacks split across messages. Treat it as a tripwire, not a defense.
 - **Synthetic evaluation.** The data is generated from templates by the same
-  person who wrote the detectors. Real chat logs will have formats,
+  code base that implements the detectors. Real chat logs will have formats,
   languages and contexts that are not covered here. No public PII or
   injection benchmark was used.
 - **Formats covered are a subset.** One national-ID scheme per country (US,
@@ -315,4 +315,4 @@ It has not been executed yet because the repository has not been pushed.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

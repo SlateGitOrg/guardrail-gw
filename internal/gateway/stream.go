@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/audit"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/openai"
-	"github.com/archit2501/guardrail-gw/internal/policy"
-	"github.com/archit2501/guardrail-gw/internal/sse"
+	"github.com/SlateGitOrg/guardrail-gw/internal/audit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/openai"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/sse"
 )
 
 // maxEventBytes bounds one upstream SSE event.

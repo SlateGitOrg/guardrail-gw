@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/archit2501/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
 )
 
 // Spec fixes the seed and size of every corpus file.

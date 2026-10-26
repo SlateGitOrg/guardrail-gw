@@ -14,10 +14,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/detect"
-	"github.com/archit2501/guardrail-gw/internal/eval"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/detect"
+	"github.com/SlateGitOrg/guardrail-gw/internal/eval"
 )
 
 func main() {

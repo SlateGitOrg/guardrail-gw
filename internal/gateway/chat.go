@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/archit2501/guardrail-gw/internal/audit"
-	"github.com/archit2501/guardrail-gw/internal/config"
-	"github.com/archit2501/guardrail-gw/internal/filter"
-	"github.com/archit2501/guardrail-gw/internal/injection"
-	"github.com/archit2501/guardrail-gw/internal/openai"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/audit"
+	"github.com/SlateGitOrg/guardrail-gw/internal/config"
+	"github.com/SlateGitOrg/guardrail-gw/internal/filter"
+	"github.com/SlateGitOrg/guardrail-gw/internal/injection"
+	"github.com/SlateGitOrg/guardrail-gw/internal/openai"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 func contextWithTimeout(r *http.Request, d time.Duration) (context.Context, context.CancelFunc) {

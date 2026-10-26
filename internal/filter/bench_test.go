@@ -3,8 +3,8 @@ package filter
 import (
 	"testing"
 
-	"github.com/archit2501/guardrail-gw/internal/corpus"
-	"github.com/archit2501/guardrail-gw/internal/policy"
+	"github.com/SlateGitOrg/guardrail-gw/internal/corpus"
+	"github.com/SlateGitOrg/guardrail-gw/internal/policy"
 )
 
 func benchText() string {
